@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { registerAgentNode } from "@/app/lib/controller";
-import { jsonError, jsonOk } from "@/app/lib/response";
+import { jsonError, jsonOk, jsonServerError } from "@/app/lib/response";
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
@@ -30,9 +30,6 @@ export async function POST(request: NextRequest) {
 
     return jsonOk(registration, 201);
   } catch (error) {
-    return jsonError(
-      error instanceof Error ? error.message : "Unable to register edge node.",
-      400,
-    );
+    return jsonServerError(error, "Unable to register edge node.", 400);
   }
 }

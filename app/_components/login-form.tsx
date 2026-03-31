@@ -2,6 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { requestJson } from "@/app/lib/request";
 
 export function LoginForm({ username }: { username: string }) {
   const router = useRouter();
@@ -14,68 +18,51 @@ export function LoginForm({ username }: { username: string }) {
     event.preventDefault();
     setError(null);
 
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username: adminUsername,
-        password,
-      }),
-    });
+    try {
+      await requestJson("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username: adminUsername, password }),
+      });
 
-    const payload = (await response.json().catch(() => null)) as
-      | { error?: string }
-      | null;
-
-    if (!response.ok) {
-      setError(payload?.error ?? "Login failed.");
-      return;
+      startTransition(() => {
+        router.replace("/overview");
+        router.refresh();
+      });
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error ? requestError.message : "Login failed.",
+      );
     }
-
-    startTransition(() => {
-      router.refresh();
-    });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="panel flex flex-col gap-5 p-6">
-      <div className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.28em] text-slate-500">
-          Shared Admin Login
-        </p>
-        <h2 className="text-2xl font-semibold text-slate-950">
-          Authenticate against the Conduit control plane.
-        </h2>
-      </div>
-
-      <label className="flex flex-col gap-2 text-sm text-slate-700">
-        Username
-        <input
-          className="input"
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="username">Username</Label>
+        <Input
+          id="username"
           value={adminUsername}
           onChange={(event) => setAdminUsername(event.target.value)}
           autoComplete="username"
         />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-2 text-sm text-slate-700">
-        Password
-        <input
-          className="input"
+      <div className="space-y-1.5">
+        <Label htmlFor="password">Password</Label>
+        <Input
+          id="password"
           type="password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="current-password"
         />
-      </label>
+      </div>
 
-      {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+      {error && <p className="text-[13px] text-red-600">{error}</p>}
 
-      <button className="button-primary" disabled={isPending}>
-        {isPending ? "Signing In..." : "Enter Console"}
-      </button>
+      <Button className="w-full" disabled={isPending}>
+        {isPending ? "Signing in..." : "Sign in"}
+      </Button>
     </form>
   );
 }

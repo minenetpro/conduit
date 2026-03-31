@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Conduit
 
-## Getting Started
+Conduit is the controller UI and ops API for provisioning `fatedier/frp` servers on existing Vultr edge nodes. It is built with Next.js for the admin surface and Convex for state, jobs, and orchestration.
 
-First, run the development server:
+## Local Development
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+1. Install dependencies with `bun install`.
+2. Copy `.env.example` to `.env.local`.
+3. Set the required Convex, session, admin, and Vultr variables.
+4. Run the app with `bun dev`.
+
+The controller expects a Convex deployment key:
+
+```dotenv
+CONVEX_DEPLOYMENT=...
+NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
+CONVEX_DEPLOY_KEY=prod:your-deployment|your-secret
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`CONVEX_DEPLOY_KEY` must come from the Convex dashboard. The user access token stored in `~/.convex/config.json` is not a deploy key and will fail with `MalformedAccessToken`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Main Responsibilities
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Admin login and bearer-token protected ops API
+- Edge node registration and heartbeat tracking
+- FRPS inventory and job orchestration
+- Vultr Reserved IPv4 allocation, attachment, and cleanup
 
-## Learn More
+## Related Repo
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`../conduit-node` contains the Bun edge agent that runs on Vultr instances and executes jobs from this controller.

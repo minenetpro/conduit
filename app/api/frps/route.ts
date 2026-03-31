@@ -1,16 +1,20 @@
 import type { NextRequest } from "next/server";
 import { authorizeRequest } from "@/app/lib/auth";
 import { createFrps, listFrps } from "@/app/lib/controller";
-import { jsonError, jsonOk } from "@/app/lib/response";
+import { jsonError, jsonOk, jsonServerError } from "@/app/lib/response";
 
 export async function GET(request: NextRequest) {
-  const auth = await authorizeRequest(request);
-  if (!auth) {
-    return jsonError("Unauthorized.", 401);
-  }
+  try {
+    const auth = await authorizeRequest(request);
+    if (!auth) {
+      return jsonError("Unauthorized.", 401);
+    }
 
-  const frps = await listFrps();
-  return jsonOk({ frps });
+    const frps = await listFrps();
+    return jsonOk({ frps });
+  } catch (error) {
+    return jsonServerError(error, "Unable to load FRPS instances.");
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -35,9 +39,6 @@ export async function POST(request: NextRequest) {
     const created = await createFrps(name.trim(), edgeNodeId);
     return jsonOk(created, 201);
   } catch (error) {
-    return jsonError(
-      error instanceof Error ? error.message : "Unable to create FRPS instance.",
-      500,
-    );
+    return jsonServerError(error, "Unable to create FRPS instance.");
   }
 }

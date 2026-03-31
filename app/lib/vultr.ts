@@ -1,7 +1,15 @@
-type VultrReservedIp = {
+type VultrReservedIpResponse = {
   id: string;
   region: string;
-  ip: string;
+  subnet?: string;
+  subnet_size?: number;
+  ip?: string;
+};
+
+export type VultrReservedIp = {
+  id: string;
+  region: string;
+  address: string;
 };
 
 const VULTR_API_URL = "https://api.vultr.com/v2";
@@ -29,7 +37,7 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 };
 
 export const createReservedIpv4 = async (region: string, label: string) => {
-  const payload = await request<{ reserved_ip: VultrReservedIp }>(
+  const payload = await request<{ reserved_ip: VultrReservedIpResponse }>(
     "/reserved-ips",
     {
       method: "POST",
@@ -41,7 +49,18 @@ export const createReservedIpv4 = async (region: string, label: string) => {
     },
   );
 
-  return payload.reserved_ip;
+  const address = payload.reserved_ip.subnet ?? payload.reserved_ip.ip;
+  if (!address) {
+    throw new Error(
+      `Vultr Reserved IP response missing subnet/ip for ${payload.reserved_ip.id}.`,
+    );
+  }
+
+  return {
+    id: payload.reserved_ip.id,
+    region: payload.reserved_ip.region,
+    address,
+  };
 };
 
 export const attachReservedIpv4 = async (

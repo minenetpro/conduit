@@ -127,6 +127,22 @@ export const createRegistrationToken = internalMutation({
   },
 });
 
+export const deleteRegistrationToken = internalMutation({
+  args: {
+    tokenId: v.id("nodeRegistrationTokens"),
+  },
+  handler: async (ctx, args) => {
+    const token = await ctx.db.get(args.tokenId);
+
+    if (!token) {
+      throw new Error("Registration token not found.");
+    }
+
+    await ctx.db.delete(args.tokenId);
+    return { ok: true };
+  },
+});
+
 export const exchangeRegistrationToken = internalMutation({
   args: {
     tokenHash: v.string(),

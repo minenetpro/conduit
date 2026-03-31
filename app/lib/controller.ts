@@ -28,6 +28,8 @@ const DEFAULT_JOB_LEASE_MS = 60_000;
 const asEdgeNodeId = (value: string) => value as Id<"edgeNodes">;
 const asFrpsId = (value: string) => value as Id<"frpsInstances">;
 const asJobId = (value: string) => value as Id<"jobs">;
+const asRegistrationTokenId = (value: string) =>
+  value as Id<"nodeRegistrationTokens">;
 
 const buildFrpsPayload = (frps: FrpsSummary): AgentJobPayload => ({
   frpsId: frps._id,
@@ -62,6 +64,11 @@ export const getNode = async (nodeId: string) =>
 
 export const listRegistrationTokens = async () =>
   convexQuery(internal.nodes.listRegistrationTokens, {});
+
+export const deleteRegistrationToken = async (tokenId: string) =>
+  convexMutation(internal.nodes.deleteRegistrationToken, {
+    tokenId: asRegistrationTokenId(tokenId),
+  });
 
 export const createRegistrationToken = async (
   label: string,
@@ -118,7 +125,7 @@ export const createFrps = async (name: string, edgeNodeId: string) => {
       name,
       edgeNodeId: asEdgeNodeId(edgeNodeId),
       reservedIpId: reservedIp.id,
-      reservedIp: reservedIp.ip,
+      reservedIp: reservedIp.address,
       region: node.region,
       bindPort: DEFAULT_BIND_PORT,
       proxyPortStart: DEFAULT_PROXY_PORT_START,
@@ -136,7 +143,7 @@ export const createFrps = async (name: string, edgeNodeId: string) => {
         frpsId: created.frpsId,
         name,
         containerName,
-        reservedIp: reservedIp.ip,
+        reservedIp: reservedIp.address,
         bindPort: DEFAULT_BIND_PORT,
         proxyPortStart: DEFAULT_PROXY_PORT_START,
         proxyPortEnd: DEFAULT_PROXY_PORT_END,
@@ -148,7 +155,7 @@ export const createFrps = async (name: string, edgeNodeId: string) => {
     return {
       frpsId: created.frpsId,
       connection: {
-        serverAddr: reservedIp.ip,
+        serverAddr: reservedIp.address,
         bindPort: DEFAULT_BIND_PORT,
         authToken,
         allowedPorts: `${DEFAULT_PROXY_PORT_START}-${DEFAULT_PROXY_PORT_END}`,

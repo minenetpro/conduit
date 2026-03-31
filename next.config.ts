@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  allowedDevOrigins: ['causal-glad-leopard.ngrok-free.app'],
 };
 
 export default nextConfig;
