@@ -11,7 +11,9 @@
 import type * as crons from "../crons.js";
 import type * as frps from "../frps.js";
 import type * as jobs from "../jobs.js";
+import type * as nodeState from "../nodeState.js";
 import type * as nodes from "../nodes.js";
+import type * as provisioningRegions from "../provisioningRegions.js";
 import type * as validators from "../validators.js";
 
 import type {
@@ -24,7 +26,9 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   frps: typeof frps;
   jobs: typeof jobs;
+  nodeState: typeof nodeState;
   nodes: typeof nodes;
+  provisioningRegions: typeof provisioningRegions;
   validators: typeof validators;
 }>;
 

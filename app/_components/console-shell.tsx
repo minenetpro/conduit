@@ -4,6 +4,7 @@ import {
   KeyRound,
   LayoutDashboard,
   LogOut,
+  Map,
   RefreshCw,
   Server,
   Waypoints,
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 const navigation = [
   { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/nodes", label: "Nodes", icon: Server },
+  { href: "/regions", label: "Regions", icon: Map },
   { href: "/frps", label: "FRPS", icon: Waypoints },
   { href: "/tokens", label: "Tokens", icon: KeyRound },
 ];

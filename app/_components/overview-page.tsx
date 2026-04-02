@@ -4,7 +4,6 @@ import type {
   RegistrationTokenSummary,
 } from "@/app/lib/contracts";
 import {
-  EmptyState,
   formatDate,
   PageHeader,
   Stat,

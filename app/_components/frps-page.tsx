@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,9 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import type {
-  EdgeNodeSummary,
   FrpsConnectionDetails,
   FrpsSummary,
+  ProvisioningRegionSummary,
 } from "@/app/lib/contracts";
 import { requestJson } from "@/app/lib/request";
 import {
@@ -32,40 +33,60 @@ import {
 type FrpsCreateResponse = {
   ok: true;
   frpsId: string;
+  edgeNodeId: string;
+  edgeNodeLabel: string;
+  provisioningRegionId: string | null;
+  provisioningRegionName: string | null;
   connection: FrpsConnectionDetails;
 };
 
 export function FrpsPage({
-  nodes,
   frps,
+  provisioningRegions,
 }: {
-  nodes: EdgeNodeSummary[];
   frps: FrpsSummary[];
+  provisioningRegions: ProvisioningRegionSummary[];
 }) {
   const router = useRouter();
-  const onlineNodes = nodes.filter((n) => n.status === "online");
+  const provisionableRegions = provisioningRegions.filter(
+    (region) => region.onlineNodeCount > 0,
+  );
   const [error, setError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [frpsName, setFrpsName] = useState("");
-  const [selectedNodeId, setSelectedNodeId] = useState(
-    onlineNodes[0]?._id ?? nodes[0]?._id ?? "",
+  const [selectedProvisioningRegionId, setSelectedProvisioningRegionId] = useState(
+    provisionableRegions[0]?._id ?? provisioningRegions[0]?._id ?? "",
   );
   const [deleteTarget, setDeleteTarget] = useState<FrpsSummary | null>(null);
   const [createdConnection, setCreatedConnection] = useState<{
     frpsId: string;
+    edgeNodeId: string;
+    edgeNodeLabel: string;
+    provisioningRegionId: string | null;
+    provisioningRegionName: string | null;
     connection: FrpsConnectionDetails;
   } | null>(null);
 
   useEffect(() => {
-    const fallback = onlineNodes[0]?._id ?? nodes[0]?._id ?? "";
+    const fallback =
+      provisionableRegions[0]?._id ?? provisioningRegions[0]?._id ?? "";
     if (
       fallback &&
-      (!selectedNodeId || !nodes.some((n) => n._id === selectedNodeId))
+      (
+        !selectedProvisioningRegionId ||
+        !provisioningRegions.some(
+          (region) => region._id === selectedProvisioningRegionId,
+        )
+      )
     ) {
-      setSelectedNodeId(fallback);
+      setSelectedProvisioningRegionId(fallback);
     }
-  }, [nodes, onlineNodes, selectedNodeId]);
+  }, [
+    provisioningRegions,
+    provisionableRegions,
+    selectedProvisioningRegionId,
+  ]);
 
   const refresh = () => router.refresh();
 
@@ -74,9 +95,12 @@ export function FrpsPage({
     try {
       setError(null);
       setPendingAction("create");
-      const payload = await requestJson<FrpsCreateResponse>("/api/frps", {
+      const payload = await requestJson<FrpsCreateResponse>("/api/frps/provision", {
         method: "POST",
-        body: JSON.stringify({ name: frpsName, edgeNodeId: selectedNodeId }),
+        body: JSON.stringify({
+          name: frpsName,
+          provisioningRegionId: selectedProvisioningRegionId,
+        }),
       });
       setCreateOpen(false);
       setCreatedConnection(payload);
@@ -115,11 +139,11 @@ export function FrpsPage({
     <div className="space-y-6">
       <PageHeader
         title="FRPS"
-        description="Managed server instances across edge nodes."
+        description="Managed server instances across provisioning regions and edge nodes."
         action={
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" disabled={onlineNodes.length === 0}>
+              <Button size="sm" disabled={provisionableRegions.length === 0}>
                 New instance
               </Button>
             </DialogTrigger>
@@ -127,8 +151,8 @@ export function FrpsPage({
               <DialogHeader>
                 <DialogTitle>Provision FRPS</DialogTitle>
                 <DialogDescription>
-                  Bind a new instance to an online edge node with a dedicated
-                  IPv4.
+                  Place a new instance in a provisioning region and let Conduit
+                  pick the least-loaded online node.
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreate} className="mt-4 space-y-4">
@@ -144,19 +168,27 @@ export function FrpsPage({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="frps-node">Edge node</Label>
+                  <Label htmlFor="frps-region">Provisioning region</Label>
                   <Select
-                    id="frps-node"
-                    value={selectedNodeId}
-                    onChange={(e) => setSelectedNodeId(e.target.value)}
+                    id="frps-region"
+                    value={selectedProvisioningRegionId}
+                    onChange={(e) => setSelectedProvisioningRegionId(e.target.value)}
                     required
                   >
-                    {onlineNodes.map((n) => (
-                      <option key={n._id} value={n._id}>
-                        {n.label} · {n.region}
+                    {provisioningRegions.map((region) => (
+                      <option
+                        key={region._id}
+                        value={region._id}
+                        disabled={region.onlineNodeCount === 0}
+                      >
+                        {region.name} · {region.onlineNodeCount}/
+                        {region.assignedNodeCount} online · {region.frpsCount} FRPS
                       </option>
                     ))}
                   </Select>
+                  <p className="text-[12px] text-zinc-500">
+                    Regions without online assigned nodes are unavailable here.
+                  </p>
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
@@ -178,16 +210,30 @@ export function FrpsPage({
         <p className="text-[13px] text-red-600">{error}</p>
       )}
 
-      {nodes.length > 0 && onlineNodes.length === 0 && (
+      {provisioningRegions.length === 0 && (
         <p className="text-[13px] text-amber-600">
-          No online nodes — bring at least one online before provisioning.
+          No provisioning regions configured.{" "}
+          <Link href="/regions" className="underline underline-offset-2">
+            Create a region
+          </Link>{" "}
+          before provisioning.
+        </p>
+      )}
+
+      {provisioningRegions.length > 0 && provisionableRegions.length === 0 && (
+        <p className="text-[13px] text-amber-600">
+          No provisioning region currently has an online assigned node.{" "}
+          <Link href="/regions" className="underline underline-offset-2">
+            Update region assignments
+          </Link>{" "}
+          or bring nodes online before provisioning.
         </p>
       )}
 
       {frps.length === 0 ? (
         <EmptyState
           title="No FRPS instances"
-          description="Create the first instance once an edge node is online."
+          description="Create the first instance once a provisioning region has online capacity."
         />
       ) : (
         <div className="divide-y divide-zinc-100">
@@ -214,6 +260,7 @@ export function FrpsPage({
                     )}
                   </div>
                   <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[13px] text-zinc-500">
+                    <span>{instance.provisioningRegionName ?? "Unassigned"}</span>
                     <span>{instance.edgeNodeLabel}</span>
                     <span className="font-mono">
                       {instance.reservedIp}:{instance.bindPort}
@@ -316,6 +363,14 @@ export function FrpsPage({
                 </dd>
               </div>
               <div className="flex justify-between gap-4 py-2.5">
+                <dt className="text-zinc-500">Provisioning region</dt>
+                <dd>{createdConnection.provisioningRegionName ?? "Unassigned"}</dd>
+              </div>
+              <div className="flex justify-between gap-4 py-2.5">
+                <dt className="text-zinc-500">Assigned node</dt>
+                <dd>{createdConnection.edgeNodeLabel}</dd>
+              </div>
+              <div className="flex justify-between gap-4 py-2.5">
                 <dt className="text-zinc-500">Bind port</dt>
                 <dd className="font-mono">
                   {createdConnection.connection.bindPort}
@@ -362,6 +417,7 @@ export function FrpsPage({
               <p className="font-medium">{deleteTarget.name}</p>
               <p className="mt-0.5 text-zinc-500">
                 {deleteTarget.reservedIp}:{deleteTarget.bindPort} ·{" "}
+                {deleteTarget.provisioningRegionName ?? "Unassigned"} ·{" "}
                 {deleteTarget.edgeNodeLabel}
               </p>
             </div>

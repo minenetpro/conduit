@@ -30,6 +30,9 @@ const projectFrpsSummary = async (
   instance: Doc<"frpsInstances">,
 ) => {
   const edgeNode = await ctx.db.get(instance.edgeNodeId);
+  const provisioningRegion = instance.provisioningRegionId
+    ? await ctx.db.get(instance.provisioningRegionId)
+    : null;
   const recentEvents = await listRecentEventsForFrps(ctx, instance._id);
 
   return {
@@ -37,6 +40,8 @@ const projectFrpsSummary = async (
     name: instance.name,
     edgeNodeId: instance.edgeNodeId,
     edgeNodeLabel: edgeNode?.label ?? "Unknown node",
+    provisioningRegionId: instance.provisioningRegionId ?? null,
+    provisioningRegionName: provisioningRegion?.name ?? null,
     reservedIp: instance.reservedIp,
     reservedIpId: instance.reservedIpId,
     bindPort: instance.bindPort,
@@ -95,6 +100,7 @@ export const createFrpsProvisioning = internalMutation({
   args: {
     name: v.string(),
     edgeNodeId: v.id("edgeNodes"),
+    provisioningRegionId: v.optional(v.union(v.id("provisioningRegions"), v.null())),
     reservedIpId: v.string(),
     reservedIp: v.string(),
     region: v.string(),
@@ -121,6 +127,7 @@ export const createFrpsProvisioning = internalMutation({
     const frpsId = await ctx.db.insert("frpsInstances", {
       name: args.name,
       edgeNodeId: args.edgeNodeId,
+      provisioningRegionId: args.provisioningRegionId ?? null,
       publicIpId,
       reservedIpId: args.reservedIpId,
       reservedIp: args.reservedIp,
@@ -175,6 +182,23 @@ export const setFrpsState = internalMutation({
       lastError: args.lastError ?? null,
       updatedAt: Date.now(),
     });
+
+    return { ok: true };
+  },
+});
+
+export const rollbackFrpsProvisioning = internalMutation({
+  args: {
+    frpsId: v.id("frpsInstances"),
+  },
+  handler: async (ctx, args) => {
+    const instance = await ctx.db.get(args.frpsId);
+    if (!instance) {
+      return { ok: true };
+    }
+
+    await ctx.db.delete(instance.publicIpId);
+    await ctx.db.delete(args.frpsId);
 
     return { ok: true };
   },

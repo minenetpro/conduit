@@ -27,6 +27,8 @@ export type EdgeNodeSummary = {
   hostname: string;
   vultrInstanceId: string;
   region: string;
+  provisioningRegionId: string | null;
+  provisioningRegionName: string | null;
   status: EdgeNodeStatus;
   lastHeartbeatAt: number | null;
   agentVersion: string;
@@ -63,6 +65,8 @@ export type FrpsSummary = {
   name: string;
   edgeNodeId: string;
   edgeNodeLabel: string;
+  provisioningRegionId: string | null;
+  provisioningRegionName: string | null;
   reservedIp: string;
   reservedIpId: string;
   bindPort: number;
@@ -78,6 +82,18 @@ export type FrpsSummary = {
   createdAt: number;
   updatedAt: number;
   recentEvents: JobEventSummary[];
+};
+
+export type ProvisioningRegionSummary = {
+  _id: string;
+  name: string;
+  slug: string;
+  assignedNodeCount: number;
+  onlineNodeCount: number;
+  frpsCount: number;
+  activeReservationCount: number;
+  createdAt: number;
+  updatedAt: number;
 };
 
 export type AgentJobPayload = {

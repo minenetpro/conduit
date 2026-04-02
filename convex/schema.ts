@@ -15,6 +15,7 @@ export default defineSchema({
     hostname: v.string(),
     vultrInstanceId: v.string(),
     region: v.string(),
+    provisioningRegionId: v.optional(v.union(v.id("provisioningRegions"), v.null())),
     nodeTokenHash: v.string(),
     nodeTokenPreview: v.string(),
     agentVersion: v.string(),
@@ -23,6 +24,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_vultrInstanceId", ["vultrInstanceId"])
+    .index("by_provisioningRegionId", ["provisioningRegionId"])
     .index("by_region", ["region"]),
 
   edgeNodePresence: defineTable({
@@ -62,9 +64,31 @@ export default defineSchema({
     .index("by_edgeNodeId", ["edgeNodeId"])
     .index("by_frpsInstanceId", ["frpsInstanceId"]),
 
+  provisioningRegions: defineTable({
+    name: v.string(),
+    slug: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_slug", ["slug"]),
+
+  provisioningReservations: defineTable({
+    provisioningRegionId: v.id("provisioningRegions"),
+    edgeNodeId: v.id("edgeNodes"),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_expiresAt", ["expiresAt"])
+    .index("by_edgeNodeId_and_expiresAt", ["edgeNodeId", "expiresAt"])
+    .index("by_provisioningRegionId_and_expiresAt", [
+      "provisioningRegionId",
+      "expiresAt",
+    ]),
+
   frpsInstances: defineTable({
     name: v.string(),
     edgeNodeId: v.id("edgeNodes"),
+    provisioningRegionId: v.optional(v.union(v.id("provisioningRegions"), v.null())),
     publicIpId: v.id("publicIps"),
     reservedIpId: v.string(),
     reservedIp: v.string(),
@@ -82,6 +106,7 @@ export default defineSchema({
     deletedAt: v.optional(v.union(v.number(), v.null())),
   })
     .index("by_edgeNodeId", ["edgeNodeId"])
+    .index("by_provisioningRegionId", ["provisioningRegionId"])
     .index("by_publicIpId", ["publicIpId"]),
 
   jobs: defineTable({

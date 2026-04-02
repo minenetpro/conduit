@@ -17,9 +17,20 @@ All admin APIs also accept `Authorization: Bearer <CONDUIT_ADMIN_API_TOKEN>`.
 - `GET /api/nodes/registration-tokens`
 - `POST /api/nodes/registration-tokens`
   - Body: `{ "label": string, "ttlHours"?: number }`
+- `GET /api/provisioning-regions`
+- `POST /api/provisioning-regions`
+  - Body: `{ "name": string }`
+- `PATCH /api/provisioning-regions/:id`
+  - Body: `{ "name": string }`
+- `DELETE /api/provisioning-regions/:id`
+- `POST /api/provisioning-regions/:id/nodes`
+  - Body: `{ "nodeId": string }`
+- `DELETE /api/provisioning-regions/:id/nodes/:nodeId`
 - `GET /api/frps`
 - `POST /api/frps`
   - Body: `{ "name": string, "edgeNodeId": string }`
+- `POST /api/frps/provision`
+  - Body: `{ "name": string, "provisioningRegionId": string }`
 - `GET /api/frps/:id`
 - `DELETE /api/frps/:id`
 - `POST /api/frps/:id/start`
@@ -43,6 +54,9 @@ All admin APIs also accept `Authorization: Bearer <CONDUIT_ADMIN_API_TOKEN>`.
 ## Resource Shape Notes
 
 - `EdgeNode.status`: `online` or `offline`
+- `EdgeNode.region`: raw Vultr/provider region
+- `EdgeNode.provisioningRegionId` / `EdgeNode.provisioningRegionName`: nullable custom provisioning region metadata
 - `FrpsInstance.desiredState`: `running`, `stopped`, or `deleted`
 - `FrpsInstance.runtimeState`: `pending`, `running`, `stopped`, `error`, `deleting`, or `deleted`
+- `FrpsInstance.provisioningRegionId` / `FrpsInstance.provisioningRegionName`: nullable region-placement metadata
 - `Job.kind`: `provision_frps`, `start_frps`, `stop_frps`, `restart_frps`, or `delete_frps`

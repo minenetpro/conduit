@@ -6,19 +6,9 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-
-const NODE_OFFLINE_AFTER_MS = 90_000;
-
-const isNodeOnline = (lastHeartbeatAt: number) =>
-  Date.now() - lastHeartbeatAt <= NODE_OFFLINE_AFTER_MS;
+import { getPresenceByNodeId, isNodeOnline } from "./nodeState";
 
 type ReadCtx = QueryCtx | MutationCtx;
-
-const getPresenceByNodeId = async (ctx: ReadCtx, edgeNodeId: Id<"edgeNodes">) =>
-  await ctx.db
-    .query("edgeNodePresence")
-    .withIndex("by_edgeNodeId", (q) => q.eq("edgeNodeId", edgeNodeId))
-    .unique();
 
 const countNodeFrps = async (ctx: ReadCtx, edgeNodeId: Id<"edgeNodes">) => {
   const frps = await ctx.db
@@ -34,6 +24,9 @@ const countNodeFrps = async (ctx: ReadCtx, edgeNodeId: Id<"edgeNodes">) => {
 
 const projectNodeSummary = async (ctx: ReadCtx, node: Doc<"edgeNodes">) => {
   const presence = await getPresenceByNodeId(ctx, node._id);
+  const provisioningRegion = node.provisioningRegionId
+    ? await ctx.db.get(node.provisioningRegionId)
+    : null;
   const frpsCount = await countNodeFrps(ctx, node._id);
   const online = presence ? isNodeOnline(presence.lastHeartbeatAt) : false;
   const status: "online" | "offline" = online ? "online" : "offline";
@@ -44,6 +37,8 @@ const projectNodeSummary = async (ctx: ReadCtx, node: Doc<"edgeNodes">) => {
     hostname: node.hostname,
     vultrInstanceId: node.vultrInstanceId,
     region: node.region,
+    provisioningRegionId: node.provisioningRegionId ?? null,
+    provisioningRegionName: provisioningRegion?.name ?? null,
     status,
     lastHeartbeatAt: presence?.lastHeartbeatAt ?? null,
     agentVersion: presence?.agentVersion ?? node.agentVersion,
@@ -201,6 +196,7 @@ export const exchangeRegistrationToken = internalMutation({
         hostname: args.hostname,
         vultrInstanceId: args.vultrInstanceId,
         region: args.region,
+        provisioningRegionId: null,
         nodeTokenHash: args.nodeTokenHash,
         nodeTokenPreview: args.nodeTokenPreview,
         agentVersion: args.agentVersion,
@@ -331,7 +327,7 @@ export const markOfflineNodes = internalMutation({
       .take(args.limit);
 
     for (const presence of onlineNodes) {
-      if (now - presence.lastHeartbeatAt > NODE_OFFLINE_AFTER_MS) {
+      if (!isNodeOnline(presence.lastHeartbeatAt)) {
         await ctx.db.patch("edgeNodePresence", presence._id, {
           status: "offline",
           updatedAt: now,

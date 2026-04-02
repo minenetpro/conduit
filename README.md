@@ -23,6 +23,7 @@ CONVEX_DEPLOY_KEY=prod:your-deployment|your-secret
 
 - Admin login and bearer-token protected ops API
 - Edge node registration and heartbeat tracking
+- Provisioning region management and node grouping
 - FRPS inventory and job orchestration
 - Vultr Reserved IPv4 allocation, attachment, and cleanup
 

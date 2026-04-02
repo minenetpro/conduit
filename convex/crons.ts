@@ -17,4 +17,11 @@ crons.interval(
   { limit: 50 },
 );
 
+crons.interval(
+  "reap expired provisioning reservations",
+  { minutes: 1 },
+  internal.provisioningRegions.reapExpiredProvisioningReservations,
+  { limit: 50 },
+);
+
 export default crons;
